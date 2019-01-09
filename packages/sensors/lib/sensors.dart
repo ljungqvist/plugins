@@ -5,7 +5,10 @@ const EventChannel _accelerometerEventChannel =
     EventChannel('plugins.flutter.io/sensors/accelerometer');
 
 const EventChannel _userAccelerometerEventChannel =
-    EventChannel('plugins.flutter.io/sensors/user_accel');
+EventChannel('plugins.flutter.io/sensors/user_accel');
+
+const EventChannel _gravityEventChannel =
+EventChannel('plugins.flutter.io/sensors/gravity');
 
 const EventChannel _gyroscopeEventChannel =
     EventChannel('plugins.flutter.io/sensors/gyroscope');
@@ -58,12 +61,32 @@ class UserAccelerometerEvent {
   String toString() => '[UserAccelerometerEvent (x: $x, y: $y, z: $z)]';
 }
 
+class GravityEvent {
+  GravityEvent(this.x, this.y, this.z);
+
+  /// Acceleration force along the x axis (excluding gravity) measured in m/s^2.
+  final double x;
+
+  /// Acceleration force along the y axis (excluding gravity) measured in m/s^2.
+  final double y;
+
+  /// Acceleration force along the z axis (excluding gravity) measured in m/s^2.
+  final double z;
+
+  @override
+  String toString() => '[GravityEvent (x: $x, y: $y, z: $z)]';
+}
+
 AccelerometerEvent _listToAccelerometerEvent(List<double> list) {
   return AccelerometerEvent(list[0], list[1], list[2]);
 }
 
 UserAccelerometerEvent _listToUserAccelerometerEvent(List<double> list) {
   return UserAccelerometerEvent(list[0], list[1], list[2]);
+}
+
+GravityEvent _listToGravityEvent(List<double> list) {
+  return GravityEvent(list[0], list[1], list[2]);
 }
 
 GyroscopeEvent _listToGyroscopeEvent(List<double> list) {
@@ -73,6 +96,7 @@ GyroscopeEvent _listToGyroscopeEvent(List<double> list) {
 Stream<AccelerometerEvent> _accelerometerEvents;
 Stream<GyroscopeEvent> _gyroscopeEvents;
 Stream<UserAccelerometerEvent> _userAccelerometerEvents;
+Stream<GravityEvent> _gravityEvents;
 
 /// A broadcast stream of events from the device accelerometer.
 Stream<AccelerometerEvent> get accelerometerEvents {
@@ -101,7 +125,18 @@ Stream<UserAccelerometerEvent> get userAccelerometerEvents {
     _userAccelerometerEvents = _userAccelerometerEventChannel
         .receiveBroadcastStream()
         .map((dynamic event) =>
-            _listToUserAccelerometerEvent(event.cast<double>()));
+        _listToUserAccelerometerEvent(event.cast<double>()));
   }
   return _userAccelerometerEvents;
+}
+
+/// Events from the device accelerometer with only gravity.
+Stream<GravityEvent> get gravityEvents {
+  if (_gravityEvents == null) {
+    _gravityEvents = _gravityEventChannel
+        .receiveBroadcastStream()
+        .map((dynamic event) =>
+        _listToGravityEvent(event.cast<double>()));
+  }
+  return _gravityEvents;
 }

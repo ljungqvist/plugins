@@ -18,7 +18,9 @@ public class SensorsPlugin implements EventChannel.StreamHandler {
       "plugins.flutter.io/sensors/accelerometer";
   private static final String GYROSCOPE_CHANNEL_NAME = "plugins.flutter.io/sensors/gyroscope";
   private static final String USER_ACCELEROMETER_CHANNEL_NAME =
-      "plugins.flutter.io/sensors/user_accel";
+          "plugins.flutter.io/sensors/user_accel";
+  private static final String GRAVITY_CHANNEL_NAME =
+          "plugins.flutter.io/sensors/gravity";
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -32,10 +34,15 @@ public class SensorsPlugin implements EventChannel.StreamHandler {
     userAccelChannel.setStreamHandler(
         new SensorsPlugin(registrar.context(), Sensor.TYPE_LINEAR_ACCELERATION));
 
+    final EventChannel gravityChannel =
+            new EventChannel(registrar.messenger(), GRAVITY_CHANNEL_NAME);
+    gravityChannel.setStreamHandler(
+            new SensorsPlugin(registrar.context(), Sensor.TYPE_GRAVITY));
+
     final EventChannel gyroscopeChannel =
-        new EventChannel(registrar.messenger(), GYROSCOPE_CHANNEL_NAME);
+            new EventChannel(registrar.messenger(), GYROSCOPE_CHANNEL_NAME);
     gyroscopeChannel.setStreamHandler(
-        new SensorsPlugin(registrar.context(), Sensor.TYPE_GYROSCOPE));
+            new SensorsPlugin(registrar.context(), Sensor.TYPE_GYROSCOPE));
   }
 
   private SensorEventListener sensorEventListener;
@@ -43,7 +50,7 @@ public class SensorsPlugin implements EventChannel.StreamHandler {
   private final Sensor sensor;
 
   private SensorsPlugin(Context context, int sensorType) {
-    sensorManager = (SensorManager) context.getSystemService(context.SENSOR_SERVICE);
+    sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
     sensor = sensorManager.getDefaultSensor(sensorType);
   }
 

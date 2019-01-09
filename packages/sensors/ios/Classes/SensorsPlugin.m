@@ -22,6 +22,13 @@
                                 binaryMessenger:[registrar messenger]];
   [userAccelerometerChannel setStreamHandler:userAccelerometerStreamHandler];
 
+  FLTGravityStreamHandler* gravityStreamHandler =
+      [[FLTGravityStreamHandler alloc] init];
+  FlutterEventChannel* gravityChannel =
+      [FlutterEventChannel eventChannelWithName:@"plugins.flutter.io/sensors/gravity"
+                                binaryMessenger:[registrar messenger]];
+  [gravityChannel setStreamHandler:gravityStreamHandler];
+
   FLTGyroscopeStreamHandler* gyroscopeStreamHandler = [[FLTGyroscopeStreamHandler alloc] init];
   FlutterEventChannel* gyroscopeChannel =
       [FlutterEventChannel eventChannelWithName:@"plugins.flutter.io/sensors/gyroscope"
@@ -79,6 +86,28 @@ static void sendTriplet(Float64 x, Float64 y, Float64 z, FlutterEventSink sink) 
       startDeviceMotionUpdatesToQueue:[[NSOperationQueue alloc] init]
                           withHandler:^(CMDeviceMotion* data, NSError* error) {
                             CMAcceleration acceleration = data.userAcceleration;
+                            // Multiply by gravity, and adjust sign values to align with Android.
+                            sendTriplet(-acceleration.x * GRAVITY, -acceleration.y * GRAVITY,
+                                        -acceleration.z * GRAVITY, eventSink);
+                          }];
+  return nil;
+}
+
+- (FlutterError*)onCancelWithArguments:(id)arguments {
+  [_motionManager stopDeviceMotionUpdates];
+  return nil;
+}
+
+@end
+
+@implementation FLTGravityStreamHandler
+
+- (FlutterError*)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
+  _initMotionManager();
+  [_motionManager
+      startDeviceMotionUpdatesToQueue:[[NSOperationQueue alloc] init]
+                          withHandler:^(CMDeviceMotion* data, NSError* error) {
+                            CMAcceleration acceleration = data.gravity;
                             // Multiply by gravity, and adjust sign values to align with Android.
                             sendTriplet(-acceleration.x * GRAVITY, -acceleration.y * GRAVITY,
                                         -acceleration.z * GRAVITY, eventSink);

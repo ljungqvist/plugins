@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sensors/sensors.dart';
 
@@ -40,20 +41,28 @@ class _MyHomePageState extends State<MyHomePage> {
   static const double _snakeCellSize = 10.0;
 
   List<double> _accelerometerValues;
+  List<double> _accelerometerValues2;
   List<double> _userAccelerometerValues;
+  List<double> _gravityValues;
   List<double> _gyroscopeValues;
   List<StreamSubscription<dynamic>> _streamSubscriptions =
       <StreamSubscription<dynamic>>[];
+  StreamSubscription<dynamic> _acc2Stream;
 
   @override
   Widget build(BuildContext context) {
     final List<String> accelerometer =
         _accelerometerValues?.map((double v) => v.toStringAsFixed(1))?.toList();
+    final List<String> accelerometer2 = _accelerometerValues2
+        ?.map((double v) => v.toStringAsFixed(1))
+        ?.toList();
     final List<String> gyroscope =
         _gyroscopeValues?.map((double v) => v.toStringAsFixed(1))?.toList();
     final List<String> userAccelerometer = _userAccelerometerValues
         ?.map((double v) => v.toStringAsFixed(1))
         ?.toList();
+    final List<String> gravity =
+        _gravityValues?.map((double v) => v.toStringAsFixed(1))?.toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -87,11 +96,34 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             padding: const EdgeInsets.all(16.0),
           ),
+          GestureDetector(
+            child: Padding(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text('Accelerometer2: $accelerometer2'),
+                ],
+              ),
+              padding: const EdgeInsets.all(16.0),
+            ),
+            onTap: () {
+              _acc2Stream.cancel();
+            },
+          ),
           Padding(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Text('UserAccelerometer: $userAccelerometer'),
+              ],
+            ),
+            padding: const EdgeInsets.all(16.0),
+          ),
+          Padding(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Text('Gravity: $gravity'),
               ],
             ),
             padding: const EdgeInsets.all(16.0),
@@ -127,6 +159,11 @@ class _MyHomePageState extends State<MyHomePage> {
         _accelerometerValues = <double>[event.x, event.y, event.z];
       });
     }));
+    _acc2Stream = accelerometerEvents.listen((AccelerometerEvent event) {
+      setState(() {
+        _accelerometerValues2 = <double>[event.x, event.y, event.z];
+      });
+    });
     _streamSubscriptions.add(gyroscopeEvents.listen((GyroscopeEvent event) {
       setState(() {
         _gyroscopeValues = <double>[event.x, event.y, event.z];
@@ -136,6 +173,11 @@ class _MyHomePageState extends State<MyHomePage> {
         .add(userAccelerometerEvents.listen((UserAccelerometerEvent event) {
       setState(() {
         _userAccelerometerValues = <double>[event.x, event.y, event.z];
+      });
+    }));
+    _streamSubscriptions.add(gravityEvents.listen((GravityEvent event) {
+      setState(() {
+        _gravityValues = <double>[event.x, event.y, event.z];
       });
     }));
   }
