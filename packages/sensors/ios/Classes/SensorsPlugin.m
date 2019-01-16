@@ -15,12 +15,12 @@
                                 binaryMessenger:[registrar messenger]];
   [accelerometerChannel setStreamHandler:accelerometerStreamHandler];
 
-  FLTUserAccelStreamHandler* userAccelerometerStreamHandler =
-      [[FLTUserAccelStreamHandler alloc] init];
-  FlutterEventChannel* userAccelerometerChannel =
-      [FlutterEventChannel eventChannelWithName:@"plugins.flutter.io/sensors/user_accel"
+  FLTUserAccelGravityStreamHandler* userAccelerometerGravityStreamHandler =
+      [[FLTUserAccelGravityStreamHandler alloc] init];
+  FlutterEventChannel* userAccelerometerGravityChannel =
+      [FlutterEventChannel eventChannelWithName:@"plugins.flutter.io/sensors/user_accel_gravity"
                                 binaryMessenger:[registrar messenger]];
-  [userAccelerometerChannel setStreamHandler:userAccelerometerStreamHandler];
+  [userAccelerometerGravityChannel setStreamHandler:userAccelerometerGravityStreamHandler];
 
   FLTGyroscopeStreamHandler* gyroscopeStreamHandler = [[FLTGyroscopeStreamHandler alloc] init];
   FlutterEventChannel* gyroscopeChannel =
@@ -31,7 +31,7 @@
 
 @end
 
-const double GRAVITY = 9.8;
+const double GRAVITY = -9.8;
 CMMotionManager* _motionManager;
 
 void _initMotionManager() {
@@ -41,11 +41,22 @@ void _initMotionManager() {
 }
 
 static void sendTriplet(Float64 x, Float64 y, Float64 z, FlutterEventSink sink) {
-  NSMutableData* event = [NSMutableData dataWithCapacity:3 * sizeof(Float64)];
-  [event appendBytes:&x length:sizeof(Float64)];
-  [event appendBytes:&y length:sizeof(Float64)];
-  [event appendBytes:&z length:sizeof(Float64)];
-  sink([FlutterStandardTypedData typedDataWithFloat64:event]);
+    NSMutableData* event = [NSMutableData dataWithCapacity:3 * sizeof(Float64)];
+    [event appendBytes:&x length:sizeof(Float64)];
+    [event appendBytes:&y length:sizeof(Float64)];
+    [event appendBytes:&z length:sizeof(Float64)];
+    sink([FlutterStandardTypedData typedDataWithFloat64:event]);
+}
+
+static void sendSixlet(Float64 x1, Float64 y1, Float64 z1, Float64 x2, Float64 y2, Float64 z2, FlutterEventSink sink) {
+    NSMutableData* event = [NSMutableData dataWithCapacity:6 * sizeof(Float64)];
+    [event appendBytes:&x1 length:sizeof(Float64)];
+    [event appendBytes:&y1 length:sizeof(Float64)];
+    [event appendBytes:&z1 length:sizeof(Float64)];
+    [event appendBytes:&x2 length:sizeof(Float64)];
+    [event appendBytes:&y2 length:sizeof(Float64)];
+    [event appendBytes:&z2 length:sizeof(Float64)];
+    sink([FlutterStandardTypedData typedDataWithFloat64:event]);
 }
 
 @implementation FLTAccelerometerStreamHandler
@@ -58,8 +69,8 @@ static void sendTriplet(Float64 x, Float64 y, Float64 z, FlutterEventSink sink) 
                              CMAcceleration acceleration = accelerometerData.acceleration;
                              // Multiply by gravity, and adjust sign values to
                              // align with Android.
-                             sendTriplet(-acceleration.x * GRAVITY, -acceleration.y * GRAVITY,
-                                         -acceleration.z * GRAVITY, eventSink);
+                             sendTriplet(acceleration.x * GRAVITY, acceleration.y * GRAVITY,
+                                         acceleration.z * GRAVITY, eventSink);
                            }];
   return nil;
 }
@@ -71,17 +82,23 @@ static void sendTriplet(Float64 x, Float64 y, Float64 z, FlutterEventSink sink) 
 
 @end
 
-@implementation FLTUserAccelStreamHandler
+@implementation FLTUserAccelGravityStreamHandler
 
 - (FlutterError*)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
   _initMotionManager();
   [_motionManager
       startDeviceMotionUpdatesToQueue:[[NSOperationQueue alloc] init]
                           withHandler:^(CMDeviceMotion* data, NSError* error) {
-                            CMAcceleration acceleration = data.userAcceleration;
-                            // Multiply by gravity, and adjust sign values to align with Android.
-                            sendTriplet(-acceleration.x * GRAVITY, -acceleration.y * GRAVITY,
-                                        -acceleration.z * GRAVITY, eventSink);
+                              CMAcceleration acceleration = data.userAcceleration;
+                              CMAcceleration gravity = data.gravity;
+                              // Multiply by gravity, and adjust sign values to align with Android.
+                              sendSixlet(acceleration.x * GRAVITY,
+                                         acceleration.y * GRAVITY,
+                                         acceleration.z * GRAVITY,
+                                         gravity.x * GRAVITY,
+                                         gravity.y * GRAVITY,
+                                         gravity.z * GRAVITY,
+                                         eventSink);
                           }];
   return nil;
 }
