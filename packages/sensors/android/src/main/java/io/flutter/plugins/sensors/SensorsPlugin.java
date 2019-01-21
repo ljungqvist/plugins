@@ -10,9 +10,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
@@ -20,8 +18,9 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
 /** SensorsPlugin */
 public class SensorsPlugin implements EventChannel.StreamHandler {
   private static final String ACCELEROMETER_CHANNEL_NAME =
-      "plugins.flutter.io/sensors/accelerometer";
-  private static final String GYROSCOPE_CHANNEL_NAME = "plugins.flutter.io/sensors/gyroscope";
+          "plugins.flutter.io/sensors/accelerometer";
+  private static final String GYROSCOPE_CHANNEL_NAME =
+          "plugins.flutter.io/sensors/gyroscope";
   private static final String USER_ACCELEROMETER_GRAVITY_CHANNEL_NAME =
           "plugins.flutter.io/sensors/user_accel_gravity";
 
@@ -45,16 +44,21 @@ public class SensorsPlugin implements EventChannel.StreamHandler {
 
   private SensorEventListener sensorEventListener;
   private final SensorManager sensorManager;
-  private final List<Sensor> sensors;
+  private final Sensor[] sensors;
   private final double[] values;
 
   private SensorsPlugin(Context context, int ... sensorTypes) {
     sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
-    sensors = new ArrayList<>(sensorTypes.length);
-    for (int sensorType : sensorTypes) {
-      sensors.add(sensorManager.getDefaultSensor(sensorType));
+    if (sensorManager != null) {
+        sensors = new Sensor[sensorTypes.length];
+        for (int i = 0; i < sensorTypes.length; ++i) {
+            sensors[i] = sensorManager.getDefaultSensor(sensorTypes[i]);
+        }
+        values = new double[sensorTypes.length * 3];
+    } else {
+        sensors = new Sensor[0];
+        values = new double[0];
     }
-    values = new double[sensorTypes.length * 3];
   }
 
   @Override
@@ -67,7 +71,9 @@ public class SensorsPlugin implements EventChannel.StreamHandler {
 
   @Override
   public void onCancel(Object arguments) {
-    sensorManager.unregisterListener(sensorEventListener);
+    if (sensorManager != null) {
+      sensorManager.unregisterListener(sensorEventListener);
+    }
   }
 
   private SensorEventListener createSensorEventListener(final EventChannel.EventSink events) {
@@ -77,8 +83,14 @@ public class SensorsPlugin implements EventChannel.StreamHandler {
 
       @Override
       public void onSensorChanged(SensorEvent event) {
-        if (event.values.length >=3) {
-          int offset = sensors.indexOf(event.sensor) * 3;
+        if (event.values.length >= 3) {
+          int offset = -1;
+          for (int i = 0; i < sensors.length; ++i) {
+              if (sensors[i].equals(event.sensor)) {
+                  offset = i * 3;
+                  break;
+              }
+          }
           if (offset >= 0) {
             for (int i = 0; i < 3; i++) {
               values[offset + i] = event.values[i];
